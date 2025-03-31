@@ -1,0 +1,25 @@
+# Ignorar arquivos e diretórios desnecessários
+.git
+.github
+.replit
+replit.nix
+node_modules
+**/node_modules
+.npmrc
+.vscode
+.env
+*.log
+*.md
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.zip
+*.tar.gz
+
+# Não ignorar estes arquivos específicos
+!README.md
+
+# Ignorar saídas temporárias, mas manter a estrutura
+output/*
+!output/.gitkeep

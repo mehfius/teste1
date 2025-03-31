@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  airbnb-scraper:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      # Mapear o diretório de saída para persistência de dados
+      - ./docker_output:/app/output
+    # Passar argumento para o script (ID do quarto do Airbnb)
+    # Pode ser substituído com docker-compose run --rm airbnb-scraper OUTRO_ID
+    command: "756587219584104742"
+    # Configurações adicionais (opcionais)
+    environment:
+      - TZ=America/Sao_Paulo
+    restart: "no"
+    
+  puppeteer-scraper:
+    build:
+      context: .
+      dockerfile: Dockerfile.puppeteer
+    volumes:
+      # Mapear os diretórios de saída e screenshots para persistência de dados
+      - ./docker_output:/app/output
+      - ./screenshots:/app/screenshots
+    # Passar argumentos para o script: roomId, outputDir, screenshotDir
+    # Pode ser substituído com docker-compose run --rm puppeteer-scraper OUTRO_ID
+    command: ["756587219584104742", "/app/output", "/app/screenshots"]
+    environment:
+      - TZ=America/Sao_Paulo
+    restart: "no"

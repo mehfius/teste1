@@ -1,0 +1,36 @@
+FROM node:18-slim
+
+# Instalar dependências necessárias para o Puppeteer
+RUN apt-get update \
+    && apt-get install -y wget gnupg ca-certificates procps libxss1 \
+    && wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add - \
+    && sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google.list' \
+    && apt-get update \
+    && apt-get install -y google-chrome-stable \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get purge --auto-remove -y curl \
+    && rm -rf /src/*.deb
+
+# Configurar Puppeteer para usar o Chrome instalado
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable
+
+WORKDIR /app
+
+# Copiar o package.json e instalar dependências
+COPY package.json package-lock.json* /app/
+RUN npm ci
+
+# Copiar os arquivos do projeto
+COPY puppeteer_scraper.js /app/
+COPY run_puppeteer.sh /app/
+
+# Criar diretórios necessários
+RUN mkdir -p /app/output /app/screenshots
+RUN chmod +x /app/run_puppeteer.sh
+
+# Comando padrão (pode ser substituído no momento da execução)
+ENTRYPOINT ["/app/run_puppeteer.sh"]
+
+# Argumento padrão para o ENTRYPOINT
+CMD ["756587219584104742"]
