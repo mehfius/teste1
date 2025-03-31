@@ -27,7 +27,7 @@ task = "packager.installForAll"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "./run_scraper.sh 884287328619193704 ./output puppeteer extract-supabase"
+args = "./batch_scraper.sh --update-supabase"
 
 [deployment]
-run = ["sh", "-c", "./run_scraper.sh 884287328619193704 ./output puppeteer extract-supabase"]
+run = ["sh", "-c", "./batch_scraper.sh --update-supabase"]
