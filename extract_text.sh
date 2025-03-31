@@ -1,5 +1,5 @@
 #!/bin/bash
-# Script para extrair texto dos arquivos HTML do Airbnb
+# Script para extrair texto dos arquivos HTML do Airbnb (versão Deno)
 
 # Definir diretórios padrão
 INPUT_DIR="./output"
@@ -64,8 +64,49 @@ echo "  Diretório de saída: $OUTPUT_DIR"
 echo "  Formato: $FORMAT"
 echo ""
 
-# Executar o extrator de texto Python
-python text_extractor.py --input-dir="$INPUT_DIR" --output-dir="$OUTPUT_DIR" --format="$FORMAT"
+# Verificar se o Deno está instalado
+if command -v deno &> /dev/null; then
+  DENO_CMD="deno"
+elif [ -f "/home/runner/.deno/bin/deno" ]; then
+  DENO_CMD="/home/runner/.deno/bin/deno"
+  export PATH="/home/runner/.deno/bin:$PATH"
+else
+  echo "Deno não encontrado. Instalando..."
+  curl -fsSL https://deno.land/x/install/install.sh > install_deno.sh
+  DENO_INSTALL=/home/runner/.deno sh install_deno.sh v1.40.1
+  rm install_deno.sh
+  
+  if [ -f "/home/runner/.deno/bin/deno" ]; then
+    DENO_CMD="/home/runner/.deno/bin/deno"
+    export PATH="/home/runner/.deno/bin:$PATH"
+  else
+    echo "Falha ao instalar Deno. Saindo."
+    exit 1
+  fi
+fi
+
+# Construir os argumentos para o extrator Deno
+DENO_ARGS="--allow-read --allow-write --allow-env"
+CMD_ARGS="--input-dir=$INPUT_DIR --output-dir=$OUTPUT_DIR --format=$FORMAT"
+
+if [ "$UPDATE_SUPABASE" = true ]; then
+  CMD_ARGS="$CMD_ARGS --update-supabase"
+  
+  # Verificar variáveis de ambiente para Supabase
+  echo "Verificando variáveis de ambiente para Supabase..."
+  if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_KEY" ]; then
+    echo "⚠️  Aviso: As variáveis de ambiente SUPABASE_URL e/ou SUPABASE_KEY não estão definidas."
+    echo "    A atualização do Supabase pode falhar."
+  else
+    echo "✅ Variáveis de ambiente para Supabase encontradas."
+    # Adicionar permissão de rede para o Deno
+    DENO_ARGS="$DENO_ARGS --allow-net"
+  fi
+fi
+
+# Executar o extrator de texto Deno
+echo "Executando com Deno: $DENO_CMD run $DENO_ARGS text_extractor.ts $CMD_ARGS"
+"$DENO_CMD" run $DENO_ARGS text_extractor.ts $CMD_ARGS
 
 # Verificar o resultado
 EXIT_CODE=$?
@@ -73,52 +114,6 @@ if [ $EXIT_CODE -eq 0 ]; then
   echo ""
   echo "Extração de texto concluída com sucesso!"
   echo "Os arquivos extraídos estão disponíveis em: $OUTPUT_DIR"
-  
-  # Atualizar Supabase se solicitado
-  if [ "$UPDATE_SUPABASE" = true ]; then
-    echo ""
-    echo "Verificando variáveis de ambiente para Supabase..."
-    if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_KEY" ]; then
-      echo "⚠️  Aviso: As variáveis de ambiente SUPABASE_URL e/ou SUPABASE_KEY não estão definidas."
-      echo "    A atualização do Supabase pode falhar."
-    else
-      echo "✅ Variáveis de ambiente para Supabase encontradas."
-    fi
-    
-    echo ""
-    echo "Iniciando atualização dos títulos no Supabase..."
-    UPDATE_COUNT=0
-    
-    # Processar cada arquivo JSON extraído
-    for JSON_FILE in "$OUTPUT_DIR"/*.json; do
-      if [ -f "$JSON_FILE" ]; then
-        FILENAME=$(basename "$JSON_FILE")
-        ROOM_ID=$(echo "$FILENAME" | grep -oP 'airbnb_\K\d+(?=_)' || echo "")
-        
-        if [ -n "$ROOM_ID" ]; then
-          # Extrair o título do arquivo JSON usando jq se disponível, ou grep como fallback
-          if command -v jq &> /dev/null; then
-            TITLE=$(jq -r '.listing.title // empty' "$JSON_FILE")
-          else
-            TITLE=$(grep -o '"title": "[^"]*"' "$JSON_FILE" | head -1 | cut -d'"' -f4)
-          fi
-          
-          if [ -n "$TITLE" ]; then
-            echo "🔄 Atualizando quarto $ROOM_ID com título: '$TITLE'"
-            python supabase_updater.py "$ROOM_ID" "$TITLE"
-            if [ $? -eq 0 ]; then
-              UPDATE_COUNT=$((UPDATE_COUNT + 1))
-            fi
-          else
-            echo "⚠️  Título não encontrado para o quarto $ROOM_ID"
-          fi
-        fi
-      fi
-    done
-    
-    echo ""
-    echo "✅ Atualização do Supabase concluída! $UPDATE_COUNT títulos atualizados."
-  fi
 else
   echo ""
   echo "Erro durante a extração de texto. Código de saída: $EXIT_CODE"
