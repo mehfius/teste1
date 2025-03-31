@@ -57,11 +57,26 @@ class AirbnbTextExtractor:
             if not text_content or len(text_content.strip()) < 100:
                 print(f"Aviso: Trafilatura extraiu pouco conteúdo, usando fallback com BeautifulSoup")
                 soup_fallback = BeautifulSoup(html_content, 'html.parser')
+                
+                # Verificar se é uma página de erro do Airbnb (JavaScript desabilitado)
+                js_error_message = soup_fallback.find(string=lambda text: 'não funcionam corretamente sem a habilitação do JavaScript' in str(text) if text else False)
+                if js_error_message:
+                    print("Detectada mensagem de erro de JavaScript do Airbnb. O site pode estar bloqueando nosso scraper.")
+                
                 # Remover scripts, estilos e outros elementos não relevantes
                 for element in soup_fallback(['script', 'style', 'head', 'meta', 'link']):
                     element.decompose()
-                # Extrair texto de tudo o que restou
-                text_content = soup_fallback.get_text(separator='\n', strip=True)
+                
+                # Tentar encontrar o conteúdo principal
+                main_content = soup_fallback.find('main')
+                if main_content:
+                    text_content = main_content.get_text(separator='\n', strip=True)
+                else:
+                    # Extrair texto de tudo o que restou se não encontrar o conteúdo principal
+                    text_content = soup_fallback.get_text(separator='\n', strip=True)
+                
+                # Limpar texto extraído
+                text_content = '\n'.join(line.strip() for line in text_content.splitlines() if line.strip())
             
             # Extrair informações estruturadas com BeautifulSoup
             soup = BeautifulSoup(html_content, 'html.parser')

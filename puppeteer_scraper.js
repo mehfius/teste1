@@ -177,16 +177,9 @@ class PuppeteerAirbnbScraper {
         // Configura o timeout de navegação
         page.setDefaultNavigationTimeout(this.options.timeout);
 
-        // Intercepta requisições para bloquear recursos desnecessários (opcional)
-        await page.setRequestInterception(true);
-        page.on('request', (request) => {
-          const resourceType = request.resourceType();
-          if (['image', 'stylesheet', 'font', 'media'].includes(resourceType)) {
-            request.abort();
-          } else {
-            request.continue();
-          }
-        });
+        // Removemos a interceptação de requisições para permitir todas as cargas de recursos
+        // Isso pode ajudar a evitar detecção como bot
+        await page.setRequestInterception(false);
 
         // Navega para a URL
         console.log(`Navegando para: ${url}`);
@@ -212,6 +205,38 @@ class PuppeteerAirbnbScraper {
           await new Promise(resolve => setTimeout(resolve, this.options.waitTime));
         }
 
+        // Verificar se há mensagem de erro de JavaScript
+        const javaScriptErrorExists = await page.evaluate(() => {
+          const errorMsg = document.body.innerText.includes('algumas partes do site do Airbnb não funcionam corretamente sem a habilitação do JavaScript');
+          return errorMsg;
+        });
+
+        if (javaScriptErrorExists) {
+          console.log('Detectada mensagem de erro de JavaScript. Tentando superar as proteções anti-bot...');
+          
+          // Scroll para simular interação humana
+          await page.evaluate(() => {
+            window.scrollBy(0, 500);
+          });
+          
+          await page.waitForTimeout(2000);
+          
+          // Clique em algum elemento da página para simular interação
+          try {
+            await page.click('body');
+          } catch (e) {
+            console.log('Não foi possível clicar no corpo da página');
+          }
+          
+          await page.waitForTimeout(2000);
+          
+          // Recarregar a página
+          await page.reload({ waitUntil: 'networkidle2' });
+          
+          // Espera adicional após o reload
+          await page.waitForTimeout(10000);
+        }
+        
         // Verifica se o elemento específico foi carregado
         const elementExists = await page.evaluate(() => {
           const elements = document.querySelectorAll('h2.atm_7l_1kw7nm4');
@@ -324,7 +349,8 @@ async function main() {
   const scraper = new PuppeteerAirbnbScraper({
     outputDir,
     screenshotDir,
-    waitTime: 8000, // Aumentando o tempo de espera para 8 segundos
+    waitTime: 15000, // Aumentando o tempo de espera para 15 segundos
+    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36', // User agent atualizado
   });
 
   try {
