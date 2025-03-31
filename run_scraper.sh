@@ -1,18 +1,20 @@
 #!/bin/bash
 # Run Airbnb Scraper with provided room ID
-# Example usage: ./run_scraper.sh 756587219584104742
-# Example with scraper selection: ./run_scraper.sh 756587219584104742 ./output puppeteer
-# Example with text extraction: ./run_scraper.sh 756587219584104742 ./output puppeteer extract
-# Example with Supabase update: ./run_scraper.sh 756587219584104742 ./output puppeteer extract-supabase
+# Example usage: ./run_scraper.sh ROOM_ID
+# Example with scraper selection: ./run_scraper.sh ROOM_ID ./output puppeteer
+# Example with text extraction: ./run_scraper.sh ROOM_ID ./output puppeteer extract
+# Example with Supabase update: ./run_scraper.sh ROOM_ID ./output puppeteer extract-supabase
 
 # Check if room ID is provided
 if [ -z "$1" ]; then
   echo "Error: Room ID is required"
   echo "Usage: ./run_scraper.sh ROOM_ID [OUTPUT_DIR] [SCRAPER_TYPE] [ACTION]"
-  echo "Example: ./run_scraper.sh 756587219584104742 ./custom_output"
-  echo "Example with scraper selection: ./run_scraper.sh 756587219584104742 ./output puppeteer"
-  echo "Example with text extraction: ./run_scraper.sh 756587219584104742 ./output puppeteer extract"
-  echo "Example with Supabase update: ./run_scraper.sh 756587219584104742 ./output puppeteer extract-supabase"
+  echo "Example: ./run_scraper.sh ROOM_ID ./custom_output"
+  echo "Example with scraper selection: ./run_scraper.sh ROOM_ID ./output puppeteer"
+  echo "Example with text extraction: ./run_scraper.sh ROOM_ID ./output puppeteer extract"
+  echo "Example with Supabase update: ./run_scraper.sh ROOM_ID ./output puppeteer extract-supabase"
+  echo ""
+  echo "Use python get_rooms.py para listar os IDs disponíveis na tabela rooms do Supabase."
   exit 1
 fi
 

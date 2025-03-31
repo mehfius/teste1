@@ -1,12 +1,14 @@
 #!/bin/bash
 # Run Airbnb Puppeteer Scraper with provided room ID
-# Example usage: ./run_puppeteer.sh 756587219584104742
+# Example usage: ./run_puppeteer.sh ROOM_ID
 
 # Check if room ID is provided
 if [ -z "$1" ]; then
   echo "Error: Room ID is required"
   echo "Usage: ./run_puppeteer.sh ROOM_ID [OUTPUT_DIR]"
-  echo "Example: ./run_puppeteer.sh 756587219584104742 ./custom_output"
+  echo "Example: ./run_puppeteer.sh ROOM_ID ./custom_output"
+  echo ""
+  echo "Use python get_rooms.py para listar os IDs disponíveis na tabela rooms do Supabase."
   exit 1
 fi
 

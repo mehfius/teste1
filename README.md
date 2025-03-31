@@ -10,20 +10,25 @@ Um sistema de scraping e análise inteligente de anúncios do Airbnb, utilizando
 - Processamento em lote de múltiplas listagens
 - Sistema de logs para monitoramento de execuções
 - Captura de screenshots para debugging
+- Comparação de scrapes para detectar mudanças em listagens ao longo do tempo
 
 ## Estrutura do Projeto
 
 ```
 .
-├── output/            # Diretório para arquivos HTML capturados
-├── extracted/         # Diretório para dados extraídos (JSON e texto)
-├── screenshots/       # Diretório para screenshots (debugging)
-├── batch_scraper.sh   # Script principal para execução em lote
-├── run_scraper.sh     # Script para execução individual
-├── extract_text.sh    # Script para extração de texto
-├── text_extractor.py  # Extrator de texto/metadados (Python)
-├── supabase_updater.py # Integração com Supabase (Python)
-└── README.md          # Este arquivo
+├── output/                # Diretório para arquivos HTML capturados
+├── extracted/             # Diretório para dados extraídos (JSON e texto)
+├── screenshots/           # Diretório para screenshots (debugging)
+├── comparison_reports/    # Diretório para relatórios de comparação
+├── batch_scraper.sh       # Script principal para execução em lote
+├── run_scraper.sh         # Script para execução individual
+├── extract_text.sh        # Script para extração de texto
+├── compare_scrapes.sh     # Script para comparar diferentes scrapes
+├── compare_scrapes.py     # Implementação da comparação de scrapes
+├── text_extractor.py      # Extrator de texto/metadados (Python)
+├── supabase_updater.py    # Integração com Supabase (Python)
+├── get_rooms.py           # Obtém os IDs dos quartos do Supabase
+└── README.md              # Este arquivo
 ```
 
 ## Dependências
@@ -79,20 +84,23 @@ Para criar a tabela de logs, execute o SQL em `create_logs_table.sql` no Editor 
 
 Exemplos:
 ```bash
-# Apenas capturar o HTML
-./run_scraper.sh 756587219584104742
+# Obter IDs disponíveis na tabela rooms
+python get_rooms.py
+
+# Apenas capturar o HTML (substitua ROOM_ID por um ID válido da tabela rooms)
+./run_scraper.sh ROOM_ID
 
 # Capturar e extrair texto
-./run_scraper.sh 756587219584104742 ./output puppeteer extract
+./run_scraper.sh ROOM_ID ./output puppeteer extract
 
 # Capturar, extrair e atualizar Supabase
-./run_scraper.sh 756587219584104742 ./output puppeteer extract-supabase
+./run_scraper.sh ROOM_ID ./output puppeteer extract-supabase
 ```
 
 ### Executar Scraping em Lote
 
 ```bash
-./batch_scraper.sh [--limit NUMERO] [--extract] [--update-supabase]
+./batch_scraper.sh [--limit NUMERO] [--extract] [--update-supabase] [--compare] [--compare-format=FORMAT]
 ```
 
 Exemplos:
@@ -105,6 +113,12 @@ Exemplos:
 
 # Apenas capturar HTML sem atualizar o Supabase
 ./batch_scraper.sh
+
+# Processar anúncios e comparar com versões anteriores (formato HTML)
+./batch_scraper.sh --extract --compare
+
+# Processar anúncios e gerar relatório de comparação em JSON
+./batch_scraper.sh --extract --compare --compare-format=json
 ```
 
 ### Extrair Texto dos Arquivos HTML
@@ -136,6 +150,16 @@ python check_table_structure.py NOME_DA_TABELA
 python count_records.py NOME_DA_TABELA
 ```
 
+### Listar Room IDs Disponíveis
+
+Para listar todos os IDs de quartos (room_ids) disponíveis na tabela 'rooms':
+
+```bash
+python get_rooms.py
+```
+
+Utilize estes IDs como parâmetro ao executar o scraper individualmente.
+
 ### Criar Tabela de Logs
 
 ```bash
@@ -146,6 +170,28 @@ python count_records.py NOME_DA_TABELA
 python create_logs_table_directly.py
 ```
 
+### Comparar Scrapes do Airbnb
+
+Para detectar mudanças em listagens do Airbnb ao longo do tempo:
+
+```bash
+./compare_scrapes.sh [--room-id=ID] [--format=FORMAT]
+```
+
+Exemplos:
+```bash
+# Comparar todas as versões de todos os quartos (relatório HTML)
+./compare_scrapes.sh
+
+# Comparar versões específicas de um quarto
+./compare_scrapes.sh --room-id=123456789
+
+# Gerar relatório em formato específico (html, json, txt)
+./compare_scrapes.sh --format=json
+```
+
+Os relatórios são salvos no diretório `./comparison_reports` por padrão.
+
 ## Workflow Recomendado
 
 1. **Configuração Inicial**:
@@ -153,14 +199,34 @@ python create_logs_table_directly.py
    - Crie a tabela `logs` no Supabase (use o SQL fornecido)
    - Adicione anúncios do Airbnb na tabela `rooms`
 
-2. **Execução**:
+2. **Verificação dos Room IDs**:
+   - Liste os IDs disponíveis na tabela `rooms`:
+     ```bash
+     python get_rooms.py
+     ```
+
+3. **Execução**:
    - Execute o script de processamento em lote:
      ```bash
      ./batch_scraper.sh --update-supabase
      ```
+   - Ou processe um anúncio específico:
+     ```bash
+     ./run_scraper.sh ROOM_ID ./output puppeteer extract-supabase
+     ```
 
-3. **Monitoramento**:
+4. **Monitoramento**:
    - Verifique os logs no Supabase para acompanhar as execuções
+   
+5. **Análise de Mudanças**:
+   - Compare diferentes versões dos scrapes para detectar alterações:
+     ```bash
+     ./batch_scraper.sh --extract --compare
+     ```
+   - Ou execute a comparação separadamente:
+     ```bash
+     ./compare_scrapes.sh --format=html
+     ```
 
 ## Troubleshooting
 
@@ -181,3 +247,10 @@ Se encontrar problemas com a tabela de logs, como erros de coluna não encontrad
 - Verifique os arquivos de log
 - Verifique se o Puppeteer está funcionando corretamente
 - Tente usar o scraper Deno como alternativa
+
+### IDs de Quartos
+
+- Este projeto foi atualizado para não utilizar IDs fixos codificados diretamente nos scripts
+- Todos os IDs de quartos devem ser obtidos da tabela 'rooms' no Supabase
+- Use `python get_rooms.py` para obter os IDs disponíveis
+- Se precisar adicionar novos IDs, insira-os diretamente na tabela 'rooms' através do painel do Supabase

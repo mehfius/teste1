@@ -6,6 +6,8 @@
 OUTPUT_DIR="./output"
 EXTRACT=false
 UPDATE_SUPABASE=false
+COMPARE=false
+COMPARE_FORMAT="html"
 LIMIT=0  # 0 significa sem limite
 
 # Registrar o horário de início para calcular o tempo de execução
@@ -39,14 +41,33 @@ while [[ $# -gt 0 ]]; do
       EXTRACT=true  # Extração é necessária para atualizar o Supabase
       shift
       ;;
+    --compare)
+      COMPARE=true
+      shift
+      ;;
+    --compare-format=*)
+      COMPARE=true
+      COMPARE_FORMAT="${1#*=}"
+      shift
+      ;;
+    --compare-format)
+      COMPARE=true
+      COMPARE_FORMAT="$2"
+      shift 2
+      ;;
     --help)
-      echo "Uso: $0 [--limit=N] [--output-dir=DIR] [--extract] [--update-supabase]"
+      echo "Uso: $0 [--limit=N] [--output-dir=DIR] [--extract] [--update-supabase] [--compare] [--compare-format=FORMAT]"
       echo "Opções:"
       echo "  --limit N          Limita o processamento a N quartos (0 = sem limite)"
       echo "  --output-dir DIR   Diretório para salvar os arquivos HTML (padrão: ./output)"
       echo "  --extract          Extrai o texto dos arquivos HTML"
       echo "  --update-supabase  Atualiza os títulos no Supabase (implica --extract)"
+      echo "  --compare          Compara diferentes versões de scrapes e gera relatório"
+      echo "  --compare-format F Formato do relatório: json, txt, html (padrão: html)"
       echo "  --help             Mostra esta ajuda"
+      echo ""
+      echo "Nota: Os room_ids são obtidos automaticamente da tabela 'rooms' do Supabase."
+      echo "      Para listar os IDs disponíveis, execute 'python get_rooms.py'."
       exit 0
       ;;
     *)
@@ -73,6 +94,7 @@ echo "Configurações:"
 echo "  Diretório de saída: $OUTPUT_DIR"
 echo "  Extração de texto: $([ "$EXTRACT" = true ] && echo "Ativada" || echo "Desativada")"
 echo "  Atualização do Supabase: $([ "$UPDATE_SUPABASE" = true ] && echo "Ativada" || echo "Desativada")"
+echo "  Comparação de scrapes: $([ "$COMPARE" = true ] && echo "Ativada (formato: $COMPARE_FORMAT)" || echo "Desativada")"
 if [ "$LIMIT" -gt 0 ]; then
   echo "  Limite de quartos: $LIMIT"
 else
@@ -204,6 +226,33 @@ EOL
   fi
 fi
 
+# Realizar comparação de scrapes se solicitado
+if [ "$COMPARE" = true ]; then
+  echo ""
+  echo "=== Iniciando comparação de scrapes ==="
+  
+  # Verificar se o script de comparação existe
+  if [ ! -f "./compare_scrapes.py" ]; then
+    echo "Erro: Script de comparação (compare_scrapes.py) não encontrado."
+    echo "Instale o script para usar a funcionalidade de comparação."
+  else
+    # Construir o comando de comparação
+    COMPARE_CMD="./compare_scrapes.sh --format=$COMPARE_FORMAT"
+    
+    # Executar a comparação
+    echo "Executando comparação com formato $COMPARE_FORMAT..."
+    eval $COMPARE_CMD
+    
+    COMPARE_RESULT=$?
+    if [ $COMPARE_RESULT -eq 0 ]; then
+      echo "✅ Comparação concluída com sucesso"
+    else
+      echo "❌ Falha na comparação com código de saída: $COMPARE_RESULT"
+    fi
+  fi
+fi
+
+# Retornar com base no resultado do processamento
 if [ "$FAILED" -gt 0 ]; then
   exit 1
 else
