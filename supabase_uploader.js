@@ -25,7 +25,9 @@ class SupabaseUploader {
   }
 
   /**
-   * Atualiza a tabela "rooms" no Supabase com o título do anúncio
+   * Atualiza a tabela "rooms" no Supabase com o título do anúncio.
+   * Se o quarto não existir, ele é inserido.
+   * Se já existir, é atualizado.
    * 
    * @param {string} roomId - ID do quarto/anúncio do Airbnb
    * @param {string} label - Título do anúncio extraído
@@ -37,23 +39,36 @@ class SupabaseUploader {
     }
 
     try {
-      console.log(`Atualizando quarto ${roomId} com título: "${label}"`);
+      // Primeiro verificar se o quarto já existe
+      const exists = await this.roomExists(roomId);
+      let result;
+      let action;
       
-      // Realizar o upsert (inserir se não existir, atualizar se existir)
-      const { data, error } = await this.supabase
-        .from('rooms')
-        .upsert(
-          { room_id: roomId, label: label },
-          { onConflict: 'room_id', returning: 'minimal' }
-        );
+      if (exists) {
+        console.log(`Atualizando quarto existente ${roomId} com título: "${label}"`);
+        // Atualizar quarto existente
+        result = await this.supabase
+          .from('rooms')
+          .update({ label: label })
+          .eq('room_id', roomId);
+        action = "atualizado";
+      } else {
+        console.log(`Inserindo novo quarto ${roomId} com título: "${label}"`);
+        // Inserir novo quarto
+        result = await this.supabase
+          .from('rooms')
+          .insert({ room_id: roomId, label: label });
+        action = "inserido";
+      }
 
+      const { error } = result;
       if (error) {
-        console.error('Erro ao atualizar o Supabase:', error);
+        console.error(`Erro ao ${action} no Supabase:`, error);
         throw error;
       }
 
-      console.log(`Quarto ${roomId} atualizado com sucesso no Supabase.`);
-      return { success: true, roomId, label };
+      console.log(`Quarto ${roomId} ${action} com sucesso no Supabase.`);
+      return { success: true, roomId, label, action };
     } catch (error) {
       console.error(`Falha ao atualizar o quarto ${roomId}:`, error.message);
       return { success: false, error: error.message };

@@ -33,7 +33,9 @@ class SupabaseUpdater:
     
     def update_room_label(self, room_id, label):
         """
-        Atualiza o título (label) de um quarto no Supabase
+        Atualiza o título (label) de um quarto no Supabase.
+        Se o quarto não existir, ele é inserido.
+        Se já existir, é atualizado.
         
         Args:
             room_id: ID do quarto/anúncio do Airbnb
@@ -46,20 +48,31 @@ class SupabaseUpdater:
             return {"success": False, "error": "room_id e label são obrigatórios"}
         
         try:
-            print(f"Atualizando quarto {room_id} com título: '{label}'")
+            # Primeiro verificar se o quarto já existe
+            exists = self.room_exists(room_id)
             
-            # Upsert - inserir se não existir, atualizar se existir
-            result = self.supabase.table('rooms').upsert(
-                {"room_id": room_id, "label": label}
-            ).execute()
+            if exists:
+                print(f"Atualizando quarto existente {room_id} com título: '{label}'")
+                # Atualizar quarto existente
+                result = self.supabase.table('rooms').update(
+                    {"label": label}
+                ).eq('room_id', room_id).execute()
+                action = "atualizado"
+            else:
+                print(f"Inserindo novo quarto {room_id} com título: '{label}'")
+                # Inserir novo quarto
+                result = self.supabase.table('rooms').insert(
+                    {"room_id": room_id, "label": label}
+                ).execute()
+                action = "inserido"
             
             # Verificar se houve erro
             if hasattr(result, 'error') and result.error:
-                print(f"Erro ao atualizar o Supabase: {result.error}")
+                print(f"Erro ao {action} no Supabase: {result.error}")
                 return {"success": False, "error": str(result.error)}
             
-            print(f"✅ Quarto {room_id} atualizado com sucesso no Supabase (Python)")
-            return {"success": True}
+            print(f"✅ Quarto {room_id} {action} com sucesso no Supabase (Python)")
+            return {"success": True, "action": action}
             
         except Exception as e:
             print(f"❌ Falha ao atualizar o quarto {room_id}: {str(e)}")
