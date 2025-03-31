@@ -193,20 +193,17 @@ export class SupabaseUpdater {
         // Tentando inserir com a estrutura mais comum para logs
         let insertData: any = {};
         
-        // Usando apenas os campos conforme definidos no arquivo config/create_logs_table.sql
+        // Conforme a estrutura exata documentada em config/create_logs_table.sql
         insertData = {
+          // Não incluímos id pois é um campo UUID com geração automática
           service_time: serviceTime,
           room_ids: roomIds,
           success_count: successCount,
-          total_count: totalCount
+          total_count: totalCount,
+          created_at: new Date().toISOString()
         };
         
-        // Adicionando timestamp se não for gerado automaticamente
-        try {
-          insertData.created_at = new Date().toISOString();
-        } catch(e) {
-          // Ignorar se não puder definir
-        }
+        // O timestamp já foi adicionado acima
         
         console.log("Tentando inserir log com os campos:", Object.keys(insertData).join(", "));
         
