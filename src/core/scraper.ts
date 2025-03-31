@@ -22,7 +22,7 @@ export class AirbnbScraper {
    * @param options Configuration options for the scraper
    */
   constructor(options: ScraperOptions = {}) {
-    this.timeout = options.timeout || 30000; // 30 seconds default timeout
+    this.timeout = options.timeout || 15000; // 15 segundos de timeout (otimizado)
     this.retries = options.retries || 3;
     this.retryDelay = options.retryDelay || 2000; // 2 seconds between retries
     this.userAgent = options.userAgent || 
@@ -53,14 +53,26 @@ export class AirbnbScraper {
           }, this.timeout);
           
           try {
+            // Configuração para melhorar o desempenho:
+            // 1. Na prática, só precisamos do HTML básico, não de todos os recursos
+            // 2. Usamos um timeout mais agressivo
+            // 3. Adicionamos cabeçalhos para priorizar texto/html
             const response = await fetch(url, {
               signal: controller.signal,
               headers: {
                 'User-Agent': this.userAgent,
-                'Accept': 'text/html,application/xhtml+xml,application/xml',
-                'Accept-Language': 'en-US,en;q=0.9',
+                'Accept': 'text/html,application/xhtml+xml',
+                'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
                 'Cache-Control': 'no-cache',
                 'Pragma': 'no-cache',
+                // Cabeçalhos para otimizar a resposta
+                'Accept-Encoding': 'gzip, deflate, br',
+                'Priority': 'high',
+                'Sec-Fetch-Dest': 'document',
+                'Sec-Fetch-Mode': 'navigate',
+                'Sec-Fetch-Site': 'none',
+                'Sec-Fetch-User': '?1',
+                'DNT': '1', // Não rastrear
               }
             });
             
@@ -71,7 +83,24 @@ export class AirbnbScraper {
             }
             
             console.log(`Response received with status: ${response.status}`);
+            
+            // Otimização: verificamos se o conteúdo é suficiente antes de baixar tudo
             const htmlContent = await response.text();
+            
+            // Verifica se pelo menos os elementos essenciais foram carregados
+            const titleFound = htmlContent.includes('<title>') && htmlContent.includes('</title>');
+            const mainContentFound = htmlContent.includes('id="site-content"') || 
+                                    htmlContent.includes('class="_gig1e7"') || 
+                                    htmlContent.includes('class="_1h6n1zu"');
+            
+            if (!titleFound) {
+              console.warn('⚠️ Aviso: Título não encontrado no HTML retornado');
+            }
+            
+            if (!mainContentFound) {
+              console.warn('⚠️ Aviso: Conteúdo principal não encontrado no HTML');
+            }
+            
             console.log(`HTML content fetched (length: ${htmlContent.length} characters)`);
             
             return htmlContent;

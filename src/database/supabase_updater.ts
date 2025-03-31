@@ -179,15 +179,41 @@ export class SupabaseUpdater {
 
       // Verificar se podemos fazer log (a tabela pode não existir)
       try {
+        // Consultar a estrutura da tabela primeiro para adaptar os campos
+        const { data: tableInfo, error: tableError } = await this.supabase
+          .from('logs')
+          .select('id')
+          .limit(1);
+          
+        // Se der erro na consulta, a tabela não existe ou não podemos acessá-la
+        if (tableError) {
+          throw new Error(`Erro ao verificar estrutura da tabela logs: ${tableError.message}`);
+        }
+        
+        // Tentando inserir com a estrutura mais comum para logs
+        let insertData: any = {};
+        
+        // Usando apenas os campos conforme definidos no arquivo config/create_logs_table.sql
+        insertData = {
+          service_time: serviceTime,
+          room_ids: roomIds,
+          success_count: successCount,
+          total_count: totalCount
+        };
+        
+        // Adicionando timestamp se não for gerado automaticamente
+        try {
+          insertData.created_at = new Date().toISOString();
+        } catch(e) {
+          // Ignorar se não puder definir
+        }
+        
+        console.log("Tentando inserir log com os campos:", Object.keys(insertData).join(", "));
+        
         // Inserir registro no log
         const { error } = await this.supabase
           .from('logs')
-          .insert({
-            service_time: serviceTime,
-            room_ids: roomIds, // Usando room_ids (sem o 's' no final)
-            success_count: successCount,
-            total_count: totalCount
-          });
+          .insert(insertData);
 
         if (error) {
           console.error(`Erro ao registrar log no Supabase: ${error.message}`);
