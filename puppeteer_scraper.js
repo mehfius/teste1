@@ -1,6 +1,7 @@
 const puppeteer = require('puppeteer');
 const fs = require('fs').promises;
 const path = require('path');
+const { SupabaseUploader } = require('./supabase_uploader');
 
 /**
  * Configurações do scraper
@@ -265,6 +266,39 @@ class PuppeteerAirbnbScraper {
         if (content.length < 5000) {
           throw new Error(`Conteúdo HTML muito pequeno (${content.length} bytes), possivelmente incompleto`);
         }
+        
+        // Extrair o título da página para atualizar no Supabase
+        const title = await page.evaluate(() => {
+          // Tentar diferentes seletores para título
+          const selectors = [
+            'h1[data-testid="listing-title"]',
+            'h1._fecoyn4',
+            'h1.atm_7l_1kw7nm4',
+            'h2.atm_7l_1kw7nm4',
+            'h1'  // Fallback genérico
+          ];
+          
+          for (const selector of selectors) {
+            const elem = document.querySelector(selector);
+            if (elem) {
+              return elem.innerText.trim();
+            }
+          }
+          
+          // Se tudo falhar, usar o título da página
+          const pageTitle = document.title;
+          if (pageTitle && pageTitle.includes(' - Airbnb')) {
+            return pageTitle.split(' - Airbnb')[0].trim();
+          }
+          
+          return pageTitle || null;
+        });
+        
+        if (title) {
+          console.log(`Título extraído: "${title}"`);
+        } else {
+          console.log('Não foi possível extrair o título da página');
+        }
 
         // Captura screenshot (opcional)
         if (this.options.screenshotDir) {
@@ -291,7 +325,8 @@ class PuppeteerAirbnbScraper {
         // Fecha a página
         await page.close();
 
-        return outputPath;
+        // Retorna o caminho do arquivo e o título
+        return { outputPath, title };
       } catch (error) {
         lastError = error;
         console.error(`Erro na tentativa ${attempt}:`, error.message);
@@ -357,8 +392,34 @@ async function main() {
     console.log(`Iniciando scraping para o quarto ID: ${roomId}`);
     console.log(`Diretório de saída: ${outputDir}`);
     
-    const outputPath = await scraper.scrapeRoom(roomId);
+    // Executar o scraping
+    const { outputPath, title } = await scraper.scrapeRoom(roomId);
     console.log(`Scraping concluído com sucesso! Arquivo salvo em: ${outputPath}`);
+    
+    // Atualizar o título no Supabase se temos ambos roomId e título
+    if (roomId && title) {
+      try {
+        // Verificar se temos as variáveis de ambiente necessárias para o Supabase
+        if (process.env.SUPABASE_URL && process.env.SUPABASE_KEY) {
+          console.log('Iniciando atualização no Supabase...');
+          
+          const supabaseUploader = new SupabaseUploader();
+          const result = await supabaseUploader.updateRoomLabel(roomId, title);
+          
+          if (result.success) {
+            console.log(`✅ Supabase atualizado com sucesso para o quarto ${roomId}`);
+          } else {
+            console.error(`❌ Falha ao atualizar o Supabase:`, result.error);
+          }
+        } else {
+          console.log('Variáveis de ambiente SUPABASE_URL e SUPABASE_KEY não configuradas. Pulando atualização do Supabase.');
+        }
+      } catch (supabaseError) {
+        console.error('Erro ao atualizar o Supabase:', supabaseError.message);
+      }
+    } else {
+      console.log('Título não extraído. Não é possível atualizar o Supabase.');
+    }
   } catch (error) {
     console.error('Erro durante o scraping:', error.message);
     process.exit(1);

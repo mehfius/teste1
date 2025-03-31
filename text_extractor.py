@@ -20,6 +20,14 @@ from pathlib import Path
 import trafilatura
 from bs4 import BeautifulSoup
 
+# Importar o módulo SupabaseUpdater se disponível
+try:
+    from supabase_updater import SupabaseUpdater
+    SUPABASE_AVAILABLE = True
+except ImportError:
+    SUPABASE_AVAILABLE = False
+    print("Aviso: Módulo supabase_updater não encontrado. A atualização do Supabase está desativada.")
+
 class AirbnbTextExtractor:
     """
     Classe para extrair e organizar o conteúdo textual de páginas HTML do Airbnb.
@@ -166,6 +174,20 @@ class AirbnbTextExtractor:
                 text_output_path = os.path.join(output_dir, f"{base_name}.txt")
                 with open(text_output_path, 'w', encoding='utf-8') as text_file:
                     text_file.write(result["content"] if result["content"] else "")
+                
+                # Atualizar o Supabase com o título extraído, se disponível
+                title = result.get("listing", {}).get("title")
+                if SUPABASE_AVAILABLE and room_id and title:
+                    try:
+                        print(f"Atualizando Supabase para o quarto {room_id} com título: '{title}'")
+                        updater = SupabaseUpdater()
+                        update_result = updater.update_room_label(room_id, title)
+                        if update_result.get("success"):
+                            print(f"✅ Título atualizado no Supabase para o quarto {room_id}")
+                        else:
+                            print(f"❌ Falha ao atualizar o Supabase: {update_result.get('error')}")
+                    except Exception as e:
+                        print(f"❌ Erro ao conectar ao Supabase: {str(e)}")
                 
                 print(f"Processado: {html_file} -> {json_output_path}")
                 success_count += 1

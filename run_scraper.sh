@@ -2,19 +2,24 @@
 # Run Airbnb Scraper with provided room ID
 # Example usage: ./run_scraper.sh 756587219584104742
 # Example with scraper selection: ./run_scraper.sh 756587219584104742 ./output puppeteer
+# Example with text extraction: ./run_scraper.sh 756587219584104742 ./output puppeteer extract
+# Example with Supabase update: ./run_scraper.sh 756587219584104742 ./output puppeteer extract-supabase
 
 # Check if room ID is provided
 if [ -z "$1" ]; then
   echo "Error: Room ID is required"
-  echo "Usage: ./run_scraper.sh ROOM_ID [OUTPUT_DIR] [SCRAPER_TYPE]"
+  echo "Usage: ./run_scraper.sh ROOM_ID [OUTPUT_DIR] [SCRAPER_TYPE] [ACTION]"
   echo "Example: ./run_scraper.sh 756587219584104742 ./custom_output"
   echo "Example with scraper selection: ./run_scraper.sh 756587219584104742 ./output puppeteer"
+  echo "Example with text extraction: ./run_scraper.sh 756587219584104742 ./output puppeteer extract"
+  echo "Example with Supabase update: ./run_scraper.sh 756587219584104742 ./output puppeteer extract-supabase"
   exit 1
 fi
 
 ROOM_ID=$1
 OUTPUT_DIR=${2:-"./output"}
 SCRAPER_TYPE=${3:-"puppeteer"} # Default to puppeteer, alternatives: "deno"
+ACTION=${4:-"scrape"} # scrape, extract, extract-supabase
 
 # Se for usar o puppeteer, chama o script correspondente
 if [ "$SCRAPER_TYPE" = "puppeteer" ]; then
@@ -33,6 +38,28 @@ if [ "$SCRAPER_TYPE" = "puppeteer" ]; then
   exit_code=$?
   if [ $exit_code -eq 0 ]; then
     echo "Puppeteer scraper completed successfully!"
+    
+    # Se solicitado, executar extração de texto
+    if [[ "$ACTION" == "extract" || "$ACTION" == "extract-supabase" ]]; then
+      echo ""
+      echo "==============================================="
+      echo "Iniciando extração de texto..."
+      
+      # Determinar se deve atualizar o Supabase
+      if [ "$ACTION" == "extract-supabase" ]; then
+        ./extract_text.sh --input-dir="$OUTPUT_DIR" --format=both --update-supabase
+      else
+        ./extract_text.sh --input-dir="$OUTPUT_DIR" --format=both
+      fi
+      
+      extract_exit_code=$?
+      if [ $extract_exit_code -eq 0 ]; then
+        echo "Processo completo: Scraping e extração de texto concluídos com sucesso!"
+      else
+        echo "Scraping concluído, mas a extração de texto falhou com código: $extract_exit_code"
+        exit_code=$extract_exit_code
+      fi
+    fi
   else
     echo "Puppeteer scraper failed with exit code: $exit_code"
   fi
@@ -74,6 +101,28 @@ echo "Using Deno at: $DENO_CMD"
 exit_code=$?
 if [ $exit_code -eq 0 ]; then
   echo "Deno scraper completed successfully!"
+  
+  # Se solicitado, executar extração de texto
+  if [[ "$ACTION" == "extract" || "$ACTION" == "extract-supabase" ]]; then
+    echo ""
+    echo "==============================================="
+    echo "Iniciando extração de texto..."
+    
+    # Determinar se deve atualizar o Supabase
+    if [ "$ACTION" == "extract-supabase" ]; then
+      ./extract_text.sh --input-dir="$OUTPUT_DIR" --format=both --update-supabase
+    else
+      ./extract_text.sh --input-dir="$OUTPUT_DIR" --format=both
+    fi
+    
+    extract_exit_code=$?
+    if [ $extract_exit_code -eq 0 ]; then
+      echo "Processo completo: Scraping e extração de texto concluídos com sucesso!"
+    else
+      echo "Scraping concluído, mas a extração de texto falhou com código: $extract_exit_code"
+      exit_code=$extract_exit_code
+    fi
+  fi
 else
   echo "Deno scraper failed with exit code: $exit_code"
 fi
