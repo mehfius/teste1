@@ -6,6 +6,15 @@ Este documento explica como usar o Airbnb Scraper dentro de um contêiner Docker
 
 - [Docker](https://www.docker.com/get-started) instalado
 - [Docker Compose](https://docs.docker.com/compose/install/) (opcional, mas recomendado)
+- Credenciais do Supabase (URL e chave de API) para usar o serviço full-scraper
+
+## Opções de Serviços
+
+O projeto oferece três variantes do scraper via Docker:
+
+1. **airbnb-scraper**: Versão básica com Deno (apenas scraping)
+2. **puppeteer-scraper**: Usando Puppeteer para melhor renderização de JavaScript
+3. **full-scraper**: Versão completa com Python, Puppeteer e integração com Supabase
 
 ## Opções de Execução
 
@@ -14,14 +23,23 @@ Este documento explica como usar o Airbnb Scraper dentro de um contêiner Docker
 O Docker Compose facilita a execução e a configuração do contêiner:
 
 ```bash
-# Construir e executar o contêiner com o ID padrão (756587219584104742)
-docker-compose up --build
+# Executar a versão básica com o ID padrão (756587219584104742)
+docker-compose up --build airbnb-scraper
 
-# Executar com um ID personalizado
-docker-compose run --rm airbnb-scraper NOVO_ID_DO_QUARTO
+# Executar a versão com Puppeteer 
+docker-compose up --build puppeteer-scraper
+
+# Executar a versão completa com suporte a Python e Supabase
+# Primeiro configure as variáveis de ambiente
+export SUPABASE_URL=sua_url_supabase
+export SUPABASE_KEY=sua_chave_supabase
+docker-compose up --build full-scraper
+
+# Executar processamento em lote de todos os quartos do Supabase
+docker-compose run --rm full-scraper --update-supabase
 
 # Executar em background (modo daemon)
-docker-compose up -d
+docker-compose up -d full-scraper
 ```
 
 ### 2. Usando Docker Diretamente
@@ -29,45 +47,48 @@ docker-compose up -d
 Você também pode usar os comandos Docker padrão:
 
 ```bash
-# Construir a imagem
-docker build -t airbnb-scraper .
+# Construir a imagem completa
+docker build -t airbnb-full-scraper -f Dockerfile.full .
 
-# Executar com o ID padrão
-docker run --rm -v $(pwd)/docker_output:/app/output airbnb-scraper
-
-# Executar com um ID personalizado
-docker run --rm -v $(pwd)/docker_output:/app/output airbnb-scraper NOVO_ID_DO_QUARTO
+# Executar com processamento em lote
+docker run --rm \
+  -v $(pwd)/docker_output:/app/output \
+  -v $(pwd)/screenshots:/app/screenshots \
+  -v $(pwd)/extracted:/app/extracted \
+  -e SUPABASE_URL=sua_url_supabase \
+  -e SUPABASE_KEY=sua_chave_supabase \
+  airbnb-full-scraper --update-supabase
 ```
 
 ## Persistência de Dados
 
-Os arquivos HTML extraídos são salvos no diretório `docker_output/` na sua máquina local, que está mapeado para o diretório `/app/output` dentro do contêiner.
+Os dados são persistidos nos seguintes diretórios:
+
+- `docker_output/`: Arquivos HTML extraídos
+- `screenshots/`: Capturas de tela das páginas do Airbnb
+- `extracted/`: Arquivos de texto extraídos (.txt e .json)
 
 ## Configurações Avançadas
 
-### Modificar o Dockerfile
+### Opções do Dockerfile.full
 
-Você pode modificar o `Dockerfile` para ajustar configurações como:
+O `Dockerfile.full` combina todas as dependências necessárias:
 
-- Versão do Deno
-- Configurações de timeout
-- Número de tentativas em caso de falha
+- Node.js e Puppeteer para scraping
+- Python 3 para processamento de texto
+- Bibliotecas para extração de texto (trafilatura, beautifulsoup4)
+- Supabase SDK para atualizações de banco de dados
 
-### Modificar o Docker Compose
+### Variáveis de Ambiente para Supabase
 
-Edite o arquivo `docker-compose.yml` para:
+Para usar a integração com o Supabase, defina as seguintes variáveis:
 
-- Mudar a zona de tempo
-- Configurar execuções agendadas (adicionando um serviço cron)
-- Modificar o volume de saída
+```
+SUPABASE_URL=https://seu-projeto.supabase.co
+SUPABASE_KEY=sua-chave-de-api
+```
 
-## Solução de Problemas
-
-Se encontrar problemas:
-
-1. Verifique se os arquivos `Dockerfile` e `docker-compose.yml` estão corretos
-2. Verifique se as permissões do volume estão corretas
-3. Teste executando com um ID de quarto válido do Airbnb
+Essas variáveis podem ser definidas no sistema antes de executar `docker-compose` ou adicionadas a um arquivo `.env` no mesmo diretório do `docker-compose.yml`.
 
 ## Automatização com Cron
 
@@ -78,11 +99,16 @@ services:
   airbnb-scraper-cron:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.full
     volumes:
       - ./docker_output:/app/output
+      - ./screenshots:/app/screenshots
+      - ./extracted:/app/extracted
+    environment:
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_KEY=${SUPABASE_KEY}
     entrypoint: /bin/sh
-    command: -c "echo '0 */6 * * * /app/run_scraper.sh 756587219584104742 >> /var/log/cron.log 2>&1' > /etc/crontabs/root && crond -f"
+    command: -c "echo '0 */6 * * * /app/batch_scraper.sh --update-supabase >> /var/log/cron.log 2>&1' > /etc/crontabs/root && crond -f"
 ```
 
-Isso executará o scraper a cada 6 horas.
+Isso executará o processamento em lote a cada 6 horas.

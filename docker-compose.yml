@@ -1,6 +1,7 @@
 version: '3.8'
 
 services:
+  # Scraper básico com Deno
   airbnb-scraper:
     build:
       context: .
@@ -16,6 +17,7 @@ services:
       - TZ=America/Sao_Paulo
     restart: "no"
     
+  # Scraper com Puppeteer
   puppeteer-scraper:
     build:
       context: .
@@ -29,4 +31,22 @@ services:
     command: ["756587219584104742", "/app/output", "/app/screenshots"]
     environment:
       - TZ=America/Sao_Paulo
+    restart: "no"
+    
+  # Solução completa com Python, Node.js e Puppeteer
+  full-scraper:
+    build:
+      context: .
+      dockerfile: Dockerfile.full
+    volumes:
+      # Mapear os diretórios para persistência de dados
+      - ./docker_output:/app/output
+      - ./screenshots:/app/screenshots
+      - ./extracted:/app/extracted
+    # Configurar para processar todos os quartos com atualização do Supabase
+    command: ["--update-supabase"]
+    environment:
+      - TZ=America/Sao_Paulo
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_KEY=${SUPABASE_KEY}
     restart: "no"

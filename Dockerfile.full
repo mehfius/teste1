@@ -1,0 +1,49 @@
+FROM node:18-slim
+
+# Instalar dependências necessárias para o Puppeteer e Python
+RUN apt-get update \
+    && apt-get install -y wget gnupg ca-certificates procps libxss1 \
+    python3 python3-pip python3-dev \
+    && wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add - \
+    && sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google.list' \
+    && apt-get update \
+    && apt-get install -y google-chrome-stable \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get purge --auto-remove -y curl \
+    && rm -rf /src/*.deb \
+    && ln -s /usr/bin/python3 /usr/bin/python
+
+# Configurar Puppeteer para usar o Chrome instalado
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable
+
+WORKDIR /app
+
+# Copiar os arquivos Python e instalar as dependências Python
+COPY text_extractor.py supabase_updater.py get_rooms.py create_logs_table.py create_logs_table.sql /app/
+COPY pyproject.toml /app/
+RUN pip3 install --no-cache-dir supabase beautifulsoup4 trafilatura
+
+# Copiar o package.json e instalar dependências JavaScript
+COPY package.json package-lock.json* /app/
+RUN npm ci
+
+# Copiar os scripts do projeto
+COPY puppeteer_scraper.js supabase_uploader.js /app/
+COPY run_scraper.sh extract_text.sh run_puppeteer.sh batch_scraper.sh /app/
+
+# Criar diretórios necessários
+RUN mkdir -p /app/output /app/screenshots /app/extracted
+
+# Dar permissão de execução aos scripts
+RUN chmod +x /app/run_scraper.sh /app/extract_text.sh /app/run_puppeteer.sh /app/batch_scraper.sh
+
+# Configurar variáveis de ambiente
+ENV PATH="${PATH}:/app:/usr/local/bin"
+ENV PYTHONUNBUFFERED=1
+
+# Comando padrão (pode ser substituído no momento da execução)
+ENTRYPOINT ["/app/batch_scraper.sh"]
+
+# Argumentos padrão para o ENTRYPOINT
+CMD ["--update-supabase"]

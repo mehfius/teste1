@@ -5,6 +5,7 @@ Módulo para atualizar títulos de anúncios do Airbnb no Supabase.
 
 import os
 import sys
+import time
 from supabase import create_client
 
 class SupabaseUpdater:
@@ -27,9 +28,23 @@ class SupabaseUpdater:
         try:
             self.supabase = create_client(self.supabase_url, self.supabase_key)
             print("Cliente Supabase inicializado com sucesso (Python)")
+            
+            # Verificar se a tabela logs existe
+            self._ensure_logs_table_exists()
         except Exception as e:
             print(f"Erro ao conectar ao Supabase: {str(e)}")
             raise
+    
+    def _ensure_logs_table_exists(self):
+        """
+        Verifica se a tabela logs existe e cria se necessário
+        """
+        try:
+            # Verificar se tabela existe consultando por um registro
+            self.supabase.table('logs').select('id').limit(1).execute()
+        except Exception as e:
+            print(f"Tabela 'logs' pode não existir: {str(e)}")
+            print("Consulte as instruções para criar a tabela logs no arquivo create_logs_table.sql")
     
     def update_room_label(self, room_id, label):
         """
@@ -104,6 +119,45 @@ class SupabaseUpdater:
         except Exception as e:
             print(f"Falha ao verificar quarto {room_id}: {str(e)}")
             return False
+            
+    def log_execution(self, service_time, rooms_ids, success_count, total_count):
+        """
+        Registra uma execução do scraper na tabela logs
+        
+        Args:
+            service_time: Tempo de execução em segundos
+            rooms_ids: Lista de IDs dos quartos processados
+            success_count: Número de quartos processados com sucesso
+            total_count: Número total de quartos processados
+            
+        Returns:
+            dict: Resultado da operação
+        """
+        try:
+            print(f"Registrando log de execução no Supabase:")
+            print(f"  Tempo de execução: {service_time:.2f} segundos")
+            print(f"  Quartos processados: {len(rooms_ids)}")
+            print(f"  Taxa de sucesso: {success_count}/{total_count} ({(success_count/total_count*100):.1f}%)")
+            
+            # Inserir registro no log
+            result = self.supabase.table('logs').insert({
+                "service_time": service_time,
+                "room_ids": rooms_ids,  # Usando room_ids (sem o 's' final)
+                "success_count": success_count,
+                "total_count": total_count
+            }).execute()
+            
+            # Verificar se houve erro
+            if hasattr(result, 'error') and result.error:
+                print(f"Erro ao registrar log no Supabase: {result.error}")
+                return {"success": False, "error": str(result.error)}
+            
+            print(f"✅ Log de execução registrado com sucesso no Supabase")
+            return {"success": True}
+            
+        except Exception as e:
+            print(f"❌ Falha ao registrar log: {str(e)}")
+            return {"success": False, "error": str(e)}
 
 def update_from_commandline():
     """

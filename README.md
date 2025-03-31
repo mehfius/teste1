@@ -1,185 +1,183 @@
-# Airbnb HTML Scraper
+# Airbnb Scraper
 
-Uma aplicação que extrai, salva e processa conteúdo de anúncios do Airbnb.
+Um sistema de scraping e análise inteligente de anúncios do Airbnb, utilizando tecnologias modernas para obter, extrair e armazenar informações relevantes de listagens.
 
 ## Funcionalidades
 
-- Extrai e salva o conteúdo HTML de anúncios do Airbnb
-- Suporta dois métodos de scraping:
-  - **Scraper Deno**: Baseado na API fetch (conteúdo HTML inicial)
-  - **Scraper Puppeteer**: Captura conteúdo dinâmico carregado via JavaScript
-- Extração de texto e metadados dos arquivos HTML
-- Aceita o parâmetro room_id para identificar o anúncio
-- Processa URLs como https://www.airbnb.com.br/rooms/756587219584104742
-- Interface simples de linha de comando
-- Tratamento de erros com tentativas automáticas de reconexão
-- Script shell unificado para facilitar a execução
-- Suporte para captura de screenshots (modo Puppeteer)
-- Suporte para execução em Docker
-
-## Pré-requisitos
-
-- [Deno](https://deno.land/) instalado (o script de execução tentará instalar automaticamente se não estiver disponível)
-- Conexão com a internet
-- Permissões adequadas para acesso à rede e sistema de arquivos
-- (Opcional) Docker e Docker Compose para execução em contêiner
-
-## Instalação
-
-Não é necessária instalação além do Deno, que o script pode instalar automaticamente.
-
-## Uso
-
-### 1. Usando o Script Shell Unificado (Recomendado)
-
-```bash
-# Formato básico
-./run_scraper.sh ROOM_ID [OUTPUT_DIR] [SCRAPER_TYPE]
-
-# Exemplos:
-# Usando Puppeteer (padrão)
-./run_scraper.sh 756587219584104742
-
-# Usando Deno
-./run_scraper.sh 756587219584104742 ./output deno
-
-# Especificando diretório de saída personalizado
-./run_scraper.sh 756587219584104742 ./custom_output
-```
-
-### 2. Usando Scripts Específicos
-
-**Para o scraper Puppeteer:**
-```bash
-./run_puppeteer.sh ROOM_ID [OUTPUT_DIR] [SCREENSHOT_DIR]
-```
-
-**Para o scraper Deno:**
-```bash
-deno run --allow-net --allow-read --allow-write --allow-env main.ts --room-id=ROOM_ID [--output-dir=./output]
-```
-
-### 3. Usando Docker (Requer Docker instalado)
-
-```bash
-# Construir imagens
-docker-compose build
-
-# Executar o scraper baseado em Deno
-docker-compose run --rm airbnb-scraper ROOM_ID
-
-# Executar o scraper baseado em Puppeteer
-docker-compose run --rm puppeteer-scraper ROOM_ID
-```
-
-### 4. Extração de conteúdo textual
-
-```bash
-# Usar o script shell simplificado (recomendado)
-./extract_text.sh
-
-# Com parâmetros personalizados
-./extract_text.sh --input-dir=./output --output-dir=./extracted --format=both
-
-# Ou usando o Python diretamente
-# Processar um único arquivo
-python text_extractor.py --input output/airbnb_756587219584104742_*.html
-
-# Processar todos os arquivos de um diretório
-python text_extractor.py --input-dir output --output-dir extracted
-```
-
-Veja o arquivo `DOCKER_README.md` para instruções detalhadas sobre o uso com Docker.
-
-## Exemplos
-
-Usando o script shell:
-```bash
-./run_scraper.sh 756587219584104742
-```
-
-Usando um diretório de saída personalizado:
-```bash
-./run_scraper.sh 756587219584104742 ./custom_output
-```
-
-Usando Deno diretamente:
-```bash
-deno run --allow-net --allow-read --allow-write --allow-env main.ts --room-id=756587219584104742
-```
-
-Usando Docker Compose com ID personalizado:
-```bash
-docker-compose run --rm airbnb-scraper 756587219584104742
-```
-
-Isso salvará o conteúdo HTML do anúncio do Airbnb no diretório de saída especificado (padrão: ./output).
-
-## Como Funciona
-
-### Scraper Deno (Conteúdo HTML Básico)
-- Usa a API fetch nativa para baixar o conteúdo HTML dos anúncios do Airbnb
-- Cabeçalhos user-agent realistas para simular um navegador
-- Lógica de tentativas para lidar com problemas de rede
-- Configurações de timeout personalizáveis
-- Criação automática do diretório de saída
-
-### Scraper Puppeteer (Conteúdo HTML Completo com JavaScript)
-- Usa um navegador headless controlado por Puppeteer
-- Aguarda o carregamento completo do JavaScript
-- Captura o conteúdo dinâmico renderizado na página
-- Suporte para captura de screenshots
-- Filtro de requisições para melhorar o desempenho
-- Lógica de tentativas e recuperação avançada
-
-### Extrator de Texto
-- Processa os arquivos HTML para extrair conteúdo textual estruturado
-- Usa a biblioteca trafilatura para extrair texto limpo e semântico
-- Identifica metadados importantes como título, preço, localização, etc.
-- Exporta dados em formato JSON para análise posterior
-- Organiza o conteúdo de texto em arquivos separados
-
-Todos os componentes usam nomes de arquivos com timestamps para fácil rastreamento.
-
-## Automação no Replit
-
-Este projeto inclui uma configuração de fluxo de trabalho para o Replit que permite a execução automatizada do scraper. O workflow "Airbnb Scraper" executa o script para o ID de quarto especificado. Por padrão, o workflow agora usa o scraper baseado em Puppeteer para capturar conteúdo dinâmico.
-
-Para alterar o tipo de scraper ou o ID do quarto, você pode:
-
-1. Editar o arquivo `run_scraper.sh` para modificar o comportamento padrão
-2. Adicionar um parâmetro adicional ao workflow:
-   ```
-   ./run_scraper.sh 756587219584104742 ./output deno
-   ```
+- Scraping de páginas do Airbnb usando Puppeteer (JavaScript) ou Deno
+- Extração inteligente de texto e metadados com Python (BeautifulSoup e Trafilatura)
+- Armazenamento de dados em Supabase (PostgreSQL)
+- Processamento em lote de múltiplas listagens
+- Sistema de logs para monitoramento de execuções
+- Captura de screenshots para debugging
 
 ## Estrutura do Projeto
 
-### Código Principal
-- `main.ts`: Ponto de entrada para o scraper Deno
-- `scraper.ts`: Implementação do scraper usando API fetch
-- `utils.ts`: Funções utilitárias para operações de arquivo e validação
-- `deps.ts`: Gerenciamento de dependências
-- `puppeteer_scraper.js`: Implementação do scraper baseado em Puppeteer
-- `text_extractor.py`: Script Python para extrair conteúdo textual dos arquivos HTML
+```
+.
+├── output/            # Diretório para arquivos HTML capturados
+├── extracted/         # Diretório para dados extraídos (JSON e texto)
+├── screenshots/       # Diretório para screenshots (debugging)
+├── batch_scraper.sh   # Script principal para execução em lote
+├── run_scraper.sh     # Script para execução individual
+├── extract_text.sh    # Script para extração de texto
+├── text_extractor.py  # Extrator de texto/metadados (Python)
+├── supabase_updater.py # Integração com Supabase (Python)
+└── README.md          # Este arquivo
+```
 
-### Scripts Shell
-- `run_scraper.sh`: Script shell unificado (escolhe entre Deno e Puppeteer)
-- `run_puppeteer.sh`: Script shell específico para o scraper Puppeteer
-- `extract_text.sh`: Script shell para extrair texto dos arquivos HTML
+## Dependências
 
-### Docker
-- `Dockerfile`: Configuração para criar uma imagem Docker do scraper Deno
-- `Dockerfile.puppeteer`: Configuração para criar uma imagem Docker do scraper Puppeteer
-- `docker-compose.yml`: Configuração para execução com Docker Compose
-- `DOCKER_README.md`: Instruções detalhadas para execução com Docker
+### Python
+- beautifulsoup4
+- trafilatura
+- supabase
+- requests
 
-### Diretórios de Dados
-- `output/`: Diretório onde os arquivos HTML são salvos
-- `screenshots/`: Diretório para capturas de tela feitas pelo Puppeteer
-- `extracted/`: Diretório para os dados extraídos (texto e JSON)
-- `docker_output/`: Diretório para saída quando executado com Docker
+### Node.js
+- puppeteer
+- @supabase/supabase-js
 
-## Modificando o ID do Quarto
+## Configuração
 
-Para modificar o ID do quarto a ser raspado, edite o parâmetro no arquivo `run_scraper.sh` ou adicione um novo workflow com o ID desejado.
+### Variáveis de Ambiente
+
+Crie as seguintes variáveis de ambiente:
+
+```
+SUPABASE_URL=sua_url_do_supabase
+SUPABASE_KEY=sua_chave_do_supabase
+```
+
+### Estrutura do Banco de Dados (Supabase)
+
+O projeto utiliza duas tabelas principais:
+
+1. **rooms**: Armazena informações sobre os anúncios do Airbnb
+   - `id`: UUID (primary key)
+   - `room_id`: String (ID do anúncio no Airbnb)
+   - `label`: String (título do anúncio)
+   - `created_at`: Timestamp
+
+2. **logs**: Registra informações sobre as execuções do scraper
+   - `id`: UUID (primary key)
+   - `service_time`: Float (tempo de execução em segundos)
+   - `room_ids`: Integer[] (array de IDs processados)
+   - `success_count`: Integer (número de sucessos)
+   - `total_count`: Integer (número total de tentativas)
+   - `created_at`: Timestamp
+
+Para criar a tabela de logs, execute o SQL em `create_logs_table.sql` no Editor SQL do Supabase.
+
+## Uso
+
+### Executar Scraping de um Anúncio Individual
+
+```bash
+./run_scraper.sh ROOM_ID [OUTPUT_DIR] [SCRAPER_TYPE] [ACTION]
+```
+
+Exemplos:
+```bash
+# Apenas capturar o HTML
+./run_scraper.sh 756587219584104742
+
+# Capturar e extrair texto
+./run_scraper.sh 756587219584104742 ./output puppeteer extract
+
+# Capturar, extrair e atualizar Supabase
+./run_scraper.sh 756587219584104742 ./output puppeteer extract-supabase
+```
+
+### Executar Scraping em Lote
+
+```bash
+./batch_scraper.sh [--limit NUMERO] [--extract] [--update-supabase]
+```
+
+Exemplos:
+```bash
+# Processar todos os anúncios registrados no Supabase
+./batch_scraper.sh --update-supabase
+
+# Processar apenas 5 anúncios
+./batch_scraper.sh --limit=5 --update-supabase
+
+# Apenas capturar HTML sem atualizar o Supabase
+./batch_scraper.sh
+```
+
+### Extrair Texto dos Arquivos HTML
+
+```bash
+./extract_text.sh [--input-dir=DIR] [--output-dir=DIR] [--format=FORMAT] [--update-supabase]
+```
+
+Exemplos:
+```bash
+# Extrair texto de todos os arquivos HTML
+./extract_text.sh
+
+# Extrair e atualizar Supabase
+./extract_text.sh --update-supabase
+```
+
+## Utilitários
+
+### Verificar Estrutura da Tabela
+
+```bash
+python check_table_structure.py NOME_DA_TABELA
+```
+
+### Contar Registros na Tabela
+
+```bash
+python count_records.py NOME_DA_TABELA
+```
+
+### Criar Tabela de Logs
+
+```bash
+# SQL (recomendado)
+# Execute o SQL em create_logs_table.sql no Editor SQL do Supabase
+
+# Ou tente criar via API
+python create_logs_table_directly.py
+```
+
+## Workflow Recomendado
+
+1. **Configuração Inicial**:
+   - Configure as variáveis de ambiente para Supabase
+   - Crie a tabela `logs` no Supabase (use o SQL fornecido)
+   - Adicione anúncios do Airbnb na tabela `rooms`
+
+2. **Execução**:
+   - Execute o script de processamento em lote:
+     ```bash
+     ./batch_scraper.sh --update-supabase
+     ```
+
+3. **Monitoramento**:
+   - Verifique os logs no Supabase para acompanhar as execuções
+
+## Troubleshooting
+
+### Problemas com Tabela de Logs
+
+Se encontrar problemas com a tabela de logs, como erros de coluna não encontrada:
+
+1. Verifique a estrutura atual:
+   ```bash
+   python check_table_structure.py logs
+   ```
+
+2. Recriar a tabela:
+   - Use o SQL em `create_logs_table.sql` no Editor SQL do Supabase
+
+### Falhas no Scraping
+
+- Verifique os arquivos de log
+- Verifique se o Puppeteer está funcionando corretamente
+- Tente usar o scraper Deno como alternativa

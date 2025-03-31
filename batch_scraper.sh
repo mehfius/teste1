@@ -8,6 +8,9 @@ EXTRACT=false
 UPDATE_SUPABASE=false
 LIMIT=0  # 0 significa sem limite
 
+# Registrar o horário de início para calcular o tempo de execução
+START_TIME=$(date +%s)
+
 # Processar argumentos
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -138,6 +141,10 @@ for ROOM_ID in $ROOM_IDS; do
   sleep 2
 done
 
+# Calcular o tempo de execução
+END_TIME=$(date +%s)
+EXECUTION_TIME=$((END_TIME - START_TIME))
+
 echo ""
 echo "=== Processamento em lote concluído ==="
 echo "Resultado final:"
@@ -145,6 +152,57 @@ echo "  Total de quartos: $TOTAL_ROOMS"
 echo "  Processados com sucesso: $SUCCESS"
 echo "  Falhas: $FAILED"
 echo "  Taxa de sucesso: $(( (SUCCESS * 100) / TOTAL_ROOMS ))%"
+echo "  Tempo de execução: ${EXECUTION_TIME} segundos"
+
+# Armazenar todos os room_ids em um array para registrar no log
+ALL_ROOMS_ARRAY=$(echo "$ROOM_IDS" | tr '\n' ',' | sed 's/,$//')
+
+# Registrar a execução no Supabase se a atualização estiver ativada
+if [ "$UPDATE_SUPABASE" = true ]; then
+  echo ""
+  echo "Registrando log de execução no Supabase..."
+  
+  # Criar um script Python temporário para registrar o log
+  cat > register_log.py << EOL
+#!/usr/bin/env python3
+from supabase_updater import SupabaseUpdater
+
+# Inicializar o atualizador
+updater = SupabaseUpdater()
+
+# Converter a string de IDs para uma lista de inteiros
+rooms_ids_str = "${ALL_ROOMS_ARRAY}"
+rooms_ids = [int(room_id) for room_id in rooms_ids_str.split(',') if room_id.strip()]
+
+print(f"Registrando log para {len(rooms_ids)} quartos processados")
+result = updater.log_execution(
+    service_time=${EXECUTION_TIME},
+    rooms_ids=rooms_ids,
+    success_count=${SUCCESS},
+    total_count=${TOTAL_ROOMS}
+)
+
+if result.get('success'):
+    print("✅ Log de execução registrado com sucesso no Supabase")
+    exit(0)
+else:
+    print(f"❌ Falha ao registrar log: {result.get('error', 'Erro desconhecido')}")
+    exit(1)
+EOL
+
+  # Executar o script
+  python register_log.py
+  LOG_RESULT=$?
+  
+  # Remover o script temporário
+  rm register_log.py
+  
+  if [ $LOG_RESULT -eq 0 ]; then
+    echo "✅ Log de execução registrado com sucesso"
+  else
+    echo "❌ Falha ao registrar log de execução"
+  fi
+fi
 
 if [ "$FAILED" -gt 0 ]; then
   exit 1
