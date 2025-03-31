@@ -27,7 +27,7 @@ task = "packager.installForAll"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "bash -c \"./batch_scraper_simplified.sh --update-supabase\""
+args = "./bin/batch_scraper_simplified.sh"
 
 [deployment]
 run = ["sh", "-c", "./batch_scraper_simplified.sh --update-supabase"]

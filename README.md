@@ -1,20 +1,20 @@
-# Airbnb Scraper (Deno)
+# Airbnb Scraper (Deno) - Versão em Memória
 
-Um sistema de scraping para monitorar listagens do Airbnb, coletar dados e armazenar histórico de mudanças. Versão completa em Deno, sem dependências Python.
+Um sistema de scraping para monitorar listagens do Airbnb, coletar dados e atualizar um banco de dados Supabase. Esta versão otimizada processa todo o conteúdo em memória sem criar arquivos temporários.
 
 ## Tecnologias
 
 - Deno (runtime JavaScript/TypeScript)
 - Supabase (banco de dados e autenticação)
-- GitHub Actions (automação e agendamento)
+- Processamento em memória (sem arquivos temporários)
 
 ## Funcionalidades
 
-- Extrai o conteúdo HTML completo de anúncios do Airbnb
+- Extrai o conteúdo HTML dos anúncios do Airbnb diretamente em memória
 - Extrai informações principais como título, preço e avaliações
-- Armazena os dados extraídos em formatos JSON e texto
-- Salva os títulos dos anúncios no Supabase
+- Atualiza os títulos dos anúncios no Supabase em tempo real
 - Registra logs de execução para rastrear o desempenho
+- Processamento completo sem criar arquivos temporários
 
 ## Configuração
 
@@ -37,46 +37,68 @@ SUPABASE_KEY=sua_chave_do_supabase
 ### Listando os IDs de quartos disponíveis
 
 ```bash
-deno run --allow-net --allow-env get_rooms.ts
+deno run --allow-net --allow-env src/database/get_rooms.ts
 ```
 
 ### Executando o scraper para um quarto específico
 
 ```bash
-./run_scraper.sh ROOM_ID ./output deno extract-supabase
+bin/run_scraper.sh ROOM_ID
 ```
 
 ### Executando o processamento em lote
 
 ```bash
-./batch_scraper_simplified.sh
+bin/batch_scraper_simplified.sh
 ```
 
 Opções:
 - `--limit=N`: Limita o processamento a N quartos
-- `--update-supabase`: Atualiza os títulos no Supabase (ativado por padrão)
+- `--update-supabase`: Opção mantida por compatibilidade (sempre ativada)
 
 ### Verificando o status do Supabase
 
 ```bash
-/home/runner/.deno/bin/deno run --allow-net --allow-env check_supabase.ts
+deno run --allow-net --allow-env src/database/check_supabase.ts
 ```
 
 Este comando verifica a conexão com o Supabase e exibe informações sobre as tabelas `rooms` e `logs`.
 
+## Processamento em Memória
+
+Esta versão foi totalmente otimizada para processar dados em memória:
+
+1. O HTML é obtido da página do Airbnb e mantido em memória
+2. A extração de informações acontece diretamente no conteúdo HTML em memória
+3. Os dados extraídos são enviados diretamente para o Supabase
+4. Nenhum arquivo temporário é criado durante o processo
+
 ## Estrutura do projeto
 
-- `deps.ts`: Dependências do Deno
-- `main.ts`: Ponto de entrada principal
-- `scraper.ts`: Implementação do scraper
-- `utils.ts`: Funções utilitárias
-- `text_extractor.ts`: Extrator de texto do HTML
-- `supabase_updater.ts`: Gerenciador de atualizações no Supabase
-- `get_rooms.ts`: Script para listar quartos no Supabase
-- `check_supabase.ts`: Script para verificar o status do Supabase
-- `batch_scraper_simplified.sh`: Script para processamento em lote
-- `run_scraper.sh`: Script para executar o scraper para um quarto específico
-- `extract_text.sh`: Script para extrair texto de arquivos HTML
+- `bin/`: Scripts executáveis
+  - `batch_scraper_simplified.sh`: Script para processamento em lote em memória
+  - `run_scraper.sh`: Script para executar o scraper para um quarto específico
+  - `cleanup.sh`: Script para limpeza do ambiente
+  - `extract_text.sh`: Script auxiliar para extração de texto
+  - `run_puppeteer.sh`: Script para execução do Puppeteer (NodeJS)
+- `src/`: Código fonte
+  - `core/`: Implementação principal
+    - `main.ts`: Ponto de entrada principal (modo memória)
+    - `scraper.ts`: Implementação do scraper
+    - `text_extractor.ts`: Extrator de texto do HTML
+  - `database/`: Código relacionado ao banco de dados
+    - `supabase_updater.ts`: Gerenciador de atualizações no Supabase
+    - `get_rooms.ts`: Script para listar quartos no Supabase
+    - `check_supabase.ts`: Script para verificar o status do Supabase
+  - `utils/`: Utilitários
+    - `deps.ts`: Dependências do Deno
+    - `utils.ts`: Funções utilitárias
+  - `scripts/`: Scripts auxiliares
+    - `puppeteer_scraper.js`: Implementação alternativa usando Puppeteer
+    - `supabase_uploader.js`: Implementação NodeJS para Supabase
+    - `temp_log.js`: Utilitário de logging
+- `config/`: Arquivos de configuração
+  - `create_logs_table.sql`: SQL para criação da tabela de logs
 
 ## Banco de dados
 
