@@ -153,9 +153,11 @@ echo "  Tempo de execução: ${EXECUTION_TIME} segundos"
 # Armazenar todos os room_ids em um array para registrar no log
 ALL_ROOMS_ARRAY=$(echo "$ROOM_IDS" | tr '\n' ',' | sed 's/,$//')
 
-# Registrar a execução no Supabase (se a tabela existir)
+# Tentativa de registrar a execução no Supabase (funcionalidade opcional)
 echo ""
-echo "Registrando log de execução no Supabase (isso é opcional e requer tabela 'logs' existente)..."
+echo "Tentando registrar log de execução no Supabase (FUNCIONALIDADE OPCIONAL)..."
+echo "NOTA: Se a tabela 'logs' não existir, este passo será ignorado sem erros."
+echo "      O sistema funciona perfeitamente sem o registro de logs."
 
 # Executar o comando Deno diretamente usando uma string de script curta
 LOG_COMMAND="import { SupabaseUpdater } from './src/database/supabase_updater.ts'; 
@@ -163,13 +165,10 @@ try {
   const updater = new SupabaseUpdater(); 
   const roomIds = '${ALL_ROOMS_ARRAY}'.split(',').filter(id => id.trim()).map(id => parseInt(id.trim())); 
   const result = await updater.logExecution(${EXECUTION_TIME}, roomIds, ${SUCCESS}, ${TOTAL_ROOMS}); 
-  if (result.success) { 
-    console.log('✅ Log de execução registrado com sucesso no Supabase'); 
-  } else if (result.warning) { 
-    console.log('⚠️ ' + result.warning);
-  }
+  // Resultado silencioso - todos os erros são tratados dentro da função logExecution
 } catch (error) {
-  console.log('⚠️ Não foi possível registrar logs, mas isso não afeta o funcionamento principal');
+  // Ignoramos completamente qualquer erro, já que logs são opcionais
+  console.log('ℹ️ O registro de logs é totalmente opcional e não afeta a funcionalidade principal');
 }"
 
 # Executar o script diretamente sem criar arquivo

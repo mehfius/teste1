@@ -157,7 +157,16 @@ export class SupabaseUpdater {
   }
 
   /**
-   * Registra uma execução do scraper na tabela logs
+   * Registra uma execução do scraper na tabela logs (opcional)
+   * Essa função é totalmente opcional e não afeta o funcionamento principal do sistema.
+   * A tabela 'logs' deve existir previamente no banco de dados com a estrutura:
+   * - id UUID PRIMARY KEY
+   * - service_time FLOAT NOT NULL
+   * - room_ids INTEGER[] NOT NULL
+   * - success_count INTEGER NOT NULL
+   * - total_count INTEGER NOT NULL
+   * - created_at TIMESTAMP WITH TIME ZONE
+   * 
    * @param serviceTime Tempo de execução em segundos
    * @param roomIds Lista de IDs dos quartos processados
    * @param successCount Número de quartos processados com sucesso
@@ -171,7 +180,7 @@ export class SupabaseUpdater {
     totalCount: number
   ): Promise<UpdateResult> {
     try {
-      console.log(`Registrando log de execução no Supabase:`);
+      console.log(`Registrando log de execução no Supabase (opcional):`);
       console.log(`  Tempo de execução: ${serviceTime.toFixed(2)} segundos`);
       console.log(`  Quartos processados: ${roomIds.length}`);
       const successRate = totalCount > 0 ? (successCount / totalCount * 100).toFixed(1) : "0.0";
@@ -179,23 +188,8 @@ export class SupabaseUpdater {
 
       // Verificar se podemos fazer log (a tabela pode não existir)
       try {
-        // Consultar a estrutura da tabela primeiro para adaptar os campos
-        const { data: tableInfo, error: tableError } = await this.supabase
-          .from('logs')
-          .select('id')
-          .limit(1);
-          
-        // Se der erro na consulta, a tabela não existe ou não podemos acessá-la
-        if (tableError) {
-          throw new Error(`Erro ao verificar estrutura da tabela logs: ${tableError.message}`);
-        }
-        
-        // Tentando inserir com a estrutura mais comum para logs
-        let insertData: any = {};
-        
-        // Conforme a estrutura exata documentada em config/create_logs_table.sql
-        insertData = {
-          // Não incluímos id pois é um campo UUID com geração automática
+        // Tentando inserir com a estrutura conforme config/create_logs_table.sql
+        const insertData = {
           service_time: serviceTime,
           room_ids: roomIds,
           success_count: successCount,
@@ -203,33 +197,33 @@ export class SupabaseUpdater {
           created_at: new Date().toISOString()
         };
         
-        // O timestamp já foi adicionado acima
-        
-        console.log("Tentando inserir log com os campos:", Object.keys(insertData).join(", "));
-        
-        // Inserir registro no log
+        // Tentativa silenciosa - se falhar, apenas ignoramos sem mostrar erros
         const { error } = await this.supabase
           .from('logs')
           .insert(insertData);
 
         if (error) {
-          console.error(`Erro ao registrar log no Supabase: ${error.message}`);
-          console.log("A tabela 'logs' deve existir previamente no banco de dados.");
-          console.log("Verifique a estrutura da tabela conforme documentação no arquivo config/create_logs_table.sql");
-          // Continuar o script, mesmo com erro no log
-          return { success: true, warning: "Erro ao registrar log, mas o processamento foi concluído" };
+          // Falha silenciosa - apenas registramos no console para debug, mas não geramos erro
+          if (error.message.includes("Could not find")) {
+            console.log("ℹ️ A tabela 'logs' pode não existir no Supabase ou ter uma estrutura diferente.");
+            console.log("ℹ️ Esta funcionalidade é opcional e não afeta o funcionamento principal.");
+          } else {
+            console.log(`ℹ️ Log opcional não registrado: ${error.message.split('\n')[0]}`);
+          }
+          // Continuamos o processo normalmente
+          return { success: true };
         }
 
-        console.log(`✅ Log de execução registrado com sucesso no Supabase`);
+        console.log(`✅ Log de execução registrado com sucesso`);
         return { success: true };
       } catch (logError) {
-        console.error(`⚠️ Falha ao registrar log, mas o processamento foi concluído: ${logError.message}`);
-        return { success: true, warning: logError.message };
+        // Silenciamos qualquer erro do log, pois é funcionalidade opcional
+        console.log(`ℹ️ O registro de log é opcional e não afeta a operação principal`);
+        return { success: true };
       }
     } catch (e) {
-      console.error(`❌ Falha ao registrar log: ${e.message}`);
-      // Continuar o script, mesmo com erro no log
-      return { success: true, warning: e.message };
+      // Silenciamos qualquer erro do log, pois é funcionalidade opcional
+      return { success: true };
     }
   }
 }
