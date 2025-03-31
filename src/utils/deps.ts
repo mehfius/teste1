@@ -1,9 +1,9 @@
 // External dependencies
-export { parse } from "https://deno.land/std@0.192.0/flags/mod.ts";
-export * as path from "https://deno.land/std@0.192.0/path/mod.ts";
-export * as fs from "https://deno.land/std@0.192.0/fs/mod.ts";
-export { ensureDir } from "https://deno.land/std@0.192.0/fs/ensure_dir.ts";
-export { retry } from "https://deno.land/std@0.192.0/async/retry.ts";
+export { parse } from "https://deno.land/std@0.220.1/flags/mod.ts";
+export * as path from "https://deno.land/std@0.220.1/path/mod.ts";
+export * as fs from "https://deno.land/std@0.220.1/fs/mod.ts";
+export { ensureDir } from "https://deno.land/std@0.220.1/fs/ensure_dir.ts";
+export { retry } from "https://deno.land/std@0.220.1/async/retry.ts";
 
 // Add type declarations for Deno and import.meta
 declare global {

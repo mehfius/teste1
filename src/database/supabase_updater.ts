@@ -41,7 +41,7 @@ export class SupabaseUpdater {
   }
 
   /**
-   * Verifica se a tabela logs existe
+   * Verifica se a tabela logs existe, sem tentar criar
    */
   private async _ensureLogsTableExists(): Promise<boolean> {
     try {
@@ -50,7 +50,8 @@ export class SupabaseUpdater {
       return true;
     } catch (e) {
       console.error(`Tabela 'logs' pode não existir: ${e.message}`);
-      console.log("Consulte as instruções para criar a tabela logs no arquivo create_logs_table.sql");
+      console.log("A tabela 'logs' deve existir previamente no banco de dados.");
+      console.log("Verifique a estrutura da tabela conforme documentação no arquivo config/create_logs_table.sql");
       return false;
     }
   }
@@ -190,8 +191,8 @@ export class SupabaseUpdater {
 
         if (error) {
           console.error(`Erro ao registrar log no Supabase: ${error.message}`);
-          console.log("A tabela 'logs' pode não existir ou ter uma estrutura diferente.");
-          console.log("Execute o SQL em create_logs_table.sql para criar a tabela corretamente.");
+          console.log("A tabela 'logs' deve existir previamente no banco de dados.");
+          console.log("Verifique a estrutura da tabela conforme documentação no arquivo config/create_logs_table.sql");
           // Continuar o script, mesmo com erro no log
           return { success: true, warning: "Erro ao registrar log, mas o processamento foi concluído" };
         }

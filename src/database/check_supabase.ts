@@ -33,6 +33,7 @@ async function main() {
     
     if (roomsError) {
       console.error(`❌ Erro ao acessar a tabela 'rooms': ${roomsError.message}`);
+      console.log("ℹ️ A tabela 'rooms' deve existir previamente no banco de dados.");
     } else {
       console.log(`✅ Tabela 'rooms' acessada com sucesso.`);
       console.log(`📈 Total de quartos encontrados: ${rooms.length}`);
@@ -55,6 +56,7 @@ async function main() {
     
     if (logsError) {
       console.error(`❌ Erro ao acessar a tabela 'logs': ${logsError.message}`);
+      console.log("ℹ️ A tabela 'logs' deve existir previamente no banco de dados.");
     } else {
       console.log(`✅ Tabela 'logs' acessada com sucesso.`);
       

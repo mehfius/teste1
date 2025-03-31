@@ -120,7 +120,7 @@ for ROOM_ID in $ROOM_IDS; do
   echo "=== Processando quarto $COUNTER de $TOTAL_ROOMS: $ROOM_ID ==="
   
   # Executar o scraper no modo memória
-  "$PWD/bin/run_scraper.sh" "$ROOM_ID"
+  bash bin/run_scraper.sh "$ROOM_ID"
   
   # Verificar o resultado
   if [ $? -eq 0 ]; then
@@ -153,29 +153,32 @@ echo "  Tempo de execução: ${EXECUTION_TIME} segundos"
 # Armazenar todos os room_ids em um array para registrar no log
 ALL_ROOMS_ARRAY=$(echo "$ROOM_IDS" | tr '\n' ',' | sed 's/,$//')
 
-# Registrar a execução no Supabase
+# Registrar a execução no Supabase (se a tabela existir)
 echo ""
-echo "Registrando log de execução no Supabase..."
+echo "Registrando log de execução no Supabase (isso é opcional e requer tabela 'logs' existente)..."
 
 # Executar o comando Deno diretamente usando uma string de script curta
 LOG_COMMAND="import { SupabaseUpdater } from './src/database/supabase_updater.ts'; 
-const updater = new SupabaseUpdater(); 
-const roomIds = '${ALL_ROOMS_ARRAY}'.split(',').filter(id => id.trim()).map(id => parseInt(id.trim())); 
-const result = await updater.logExecution(${EXECUTION_TIME}, roomIds, ${SUCCESS}, ${TOTAL_ROOMS}); 
-if (result.success) { console.log('✅ Log de execução registrado com sucesso no Supabase'); } 
-else { console.error('❌ Falha ao registrar log: ' + (result.error || 'Erro desconhecido')); Deno.exit(1); }"
+try {
+  const updater = new SupabaseUpdater(); 
+  const roomIds = '${ALL_ROOMS_ARRAY}'.split(',').filter(id => id.trim()).map(id => parseInt(id.trim())); 
+  const result = await updater.logExecution(${EXECUTION_TIME}, roomIds, ${SUCCESS}, ${TOTAL_ROOMS}); 
+  if (result.success) { 
+    console.log('✅ Log de execução registrado com sucesso no Supabase'); 
+  } else if (result.warning) { 
+    console.log('⚠️ ' + result.warning);
+  }
+} catch (error) {
+  console.log('⚠️ Não foi possível registrar logs, mas isso não afeta o funcionamento principal');
+}"
 
 # Executar o script diretamente sem criar arquivo
 echo "$LOG_COMMAND" > ./tmp_log_command.ts
 "$DENO_CMD" run --allow-env --allow-net ./tmp_log_command.ts
 rm ./tmp_log_command.ts
-LOG_RESULT=$?
 
-if [ $LOG_RESULT -eq 0 ]; then
-  echo "✅ Log de execução registrado com sucesso"
-else
-  echo "❌ Falha ao registrar log de execução"
-fi
+# Sempre retornamos sucesso mesmo se o log falhar, pois o log é opcional
+echo "✅ Processamento principal concluído com sucesso"
 
 # Retornar com base no resultado do processamento
 if [ "$FAILED" -gt 0 ]; then
