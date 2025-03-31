@@ -1,68 +1,86 @@
 # Airbnb HTML Scraper
 
-A Deno application that scrapes and saves HTML content from Airbnb listings.
+Uma aplicação Deno que extrai e salva conteúdo HTML de anúncios do Airbnb.
 
-## Features
+## Funcionalidades
 
-- Extract and save HTML content from Airbnb listings
-- Accept room_id as a parameter
-- Process URLs like https://www.airbnb.com.br/rooms/756587219584104742
-- Store the full HTML content
-- Simple command line interface
-- Error handling with retries
-- No browser dependencies (uses fetch API)
+- Extrai e salva o conteúdo HTML de anúncios do Airbnb
+- Aceita o parâmetro room_id para identificar o anúncio
+- Processa URLs como https://www.airbnb.com.br/rooms/756587219584104742
+- Armazena o conteúdo HTML completo
+- Interface simples de linha de comando
+- Tratamento de erros com tentativas automáticas de reconexão
+- Sem dependências de navegador (usa a API fetch)
+- Script shell para facilitar a execução
 
-## Prerequisites
+## Pré-requisitos
 
-- [Deno](https://deno.land/) installed
-- Internet connection
-- Properly configured permissions for network and file system access
+- [Deno](https://deno.land/) instalado (o script de execução tentará instalar automaticamente se não estiver disponível)
+- Conexão com a internet
+- Permissões adequadas para acesso à rede e sistema de arquivos
 
-## Installation
+## Instalação
 
-No installation is needed beyond having Deno installed.
+Não é necessária instalação além do Deno, que o script pode instalar automaticamente.
 
-## Usage
+## Uso
 
-You can run the application in two ways:
+Você pode executar a aplicação de duas maneiras:
 
-### 1. Using the Shell Script (Recommended)
+### 1. Usando o Script Shell (Recomendado)
 
 ```bash
 ./run_scraper.sh ROOM_ID [OUTPUT_DIR]
 ```
 
-### 2. Using Deno Directly
+### 2. Usando Deno Diretamente
 
 ```bash
 deno run --allow-net --allow-read --allow-write --allow-env main.ts --room-id=ROOM_ID [--output-dir=./output]
 ```
 
-## Examples
+## Exemplos
 
-Using the shell script:
+Usando o script shell:
 ```bash
 ./run_scraper.sh 756587219584104742
 ```
 
-Using a custom output directory:
+Usando um diretório de saída personalizado:
 ```bash
 ./run_scraper.sh 756587219584104742 ./custom_output
 ```
 
-Using Deno directly:
+Usando Deno diretamente:
 ```bash
 deno run --allow-net --allow-read --allow-write --allow-env main.ts --room-id=756587219584104742
 ```
 
-This will save the HTML content from the Airbnb listing to the specified output directory (default: ./output).
+Isso salvará o conteúdo HTML do anúncio do Airbnb no diretório de saída especificado (padrão: ./output).
 
-## How It Works
+## Como Funciona
 
-The application uses the native fetch API to download the HTML content from Airbnb listings. It includes:
+A aplicação usa a API fetch nativa para baixar o conteúdo HTML dos anúncios do Airbnb. Inclui:
 
-- Realistic user-agent headers to mimic a browser
-- Retry logic to handle network issues
-- Customizable timeout settings
-- Automatic creation of the output directory
-- Timestamped filenames for easy tracking
+- Cabeçalhos user-agent realistas para simular um navegador
+- Lógica de tentativas para lidar com problemas de rede
+- Configurações de timeout personalizáveis
+- Criação automática do diretório de saída
+- Nomes de arquivos com timestamps para fácil rastreamento
+
+## Automação no Replit
+
+Este projeto inclui uma configuração de fluxo de trabalho para o Replit que permite a execução automatizada do scraper. O workflow "Airbnb Scraper" executa o script para o ID de quarto especificado.
+
+## Estrutura do Projeto
+
+- `main.ts`: Ponto de entrada da aplicação
+- `scraper.ts`: Implementação da classe AirbnbScraper
+- `utils.ts`: Funções utilitárias para operações de arquivo e validação
+- `deps.ts`: Gerenciamento de dependências
+- `run_scraper.sh`: Script shell para simplificar a execução
+- `output/`: Diretório onde os arquivos HTML são salvos
+
+## Modificando o ID do Quarto
+
+Para modificar o ID do quarto a ser raspado, edite o parâmetro no arquivo `run_scraper.sh` ou adicione um novo workflow com o ID desejado.

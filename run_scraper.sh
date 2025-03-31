@@ -13,14 +13,33 @@ fi
 ROOM_ID=$1
 OUTPUT_DIR=${2:-"./output"}
 
-# Export Deno to path
-export PATH="/home/runner/.deno/bin:$PATH"
+# Try to use the system Deno installation first
+if command -v deno &> /dev/null; then
+  DENO_CMD="deno"
+elif [ -f "/home/runner/.deno/bin/deno" ]; then
+  DENO_CMD="/home/runner/.deno/bin/deno"
+  export PATH="/home/runner/.deno/bin:$PATH"
+else
+  echo "Deno não encontrado. Instalando..."
+  curl -fsSL https://deno.land/x/install/install.sh > install_deno.sh
+  DENO_INSTALL=/home/runner/.deno sh install_deno.sh v1.40.1
+  rm install_deno.sh
+  
+  if [ -f "/home/runner/.deno/bin/deno" ]; then
+    DENO_CMD="/home/runner/.deno/bin/deno"
+    export PATH="/home/runner/.deno/bin:$PATH"
+  else
+    echo "Falha ao instalar Deno. Saindo."
+    exit 1
+  fi
+fi
 
 # Run the scraper
 echo "Running Airbnb scraper for room ID: $ROOM_ID"
 echo "Output directory: $OUTPUT_DIR"
+echo "Using Deno at: $DENO_CMD"
 
-deno run --allow-net --allow-read --allow-write --allow-env main.ts --room-id=$ROOM_ID --output-dir=$OUTPUT_DIR
+"$DENO_CMD" run --allow-net --allow-read --allow-write --allow-env main.ts --room-id=$ROOM_ID --output-dir=$OUTPUT_DIR
 
 exit_code=$?
 if [ $exit_code -eq 0 ]; then
